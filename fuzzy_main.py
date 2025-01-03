@@ -21,7 +21,7 @@ def remove_punctuation(words):
     return [re.sub(punctuation_regex, "", word) for word in words]
 
 
-def extract_matching_fields_with_context(words, regex, description, matches_with_context, field_name, is_regex, is_keyword, fuzzy_match_word=None, threshold=80):
+def extract_matching_fields_with_context(words, regex, description, matches_with_context, field_name, is_regex, is_keyword, fuzzy_match_word=None, threshold=90):
     """
     Extracts words matching the given regex or via fuzzy matching, stores them in a dictionary with their indexes,
     and prints context based on the field type.
@@ -29,7 +29,14 @@ def extract_matching_fields_with_context(words, regex, description, matches_with
     print(f"\n--- Matching fields for: {description} ---")
 
     for index, word in enumerate(words):  # Iterate through words with their indexes
-        if re.match(regex, word) or (fuzzy_match_word and fuzz.partial_ratio(word, fuzzy_match_word) >= threshold):  # Check regex or fuzzy match
+        # Check regex or fuzzy match
+        match_found = False
+        if regex:
+            match_found = re.match(regex, word)  # Use regex if provided
+        elif fuzzy_match_word:
+            match_found = fuzz.partial_ratio(word, fuzzy_match_word) >= threshold  # Use fuzzy matching if enabled
+
+        if match_found:  # If a match is found
             # Determine context based on field type
             if field_name == "is_loi":
                 context = [word]  # Return only the matched word
@@ -56,7 +63,7 @@ def extract_matching_fields_with_context(words, regex, description, matches_with
 
 # Main script
 if __name__ == "__main__":
-    # Replace 'hh.txt' with the path to your text file
+    # Replace 'output_surya_commune.txt' with the path to your text file
     file_path = 'output_surya_commune.txt'
 
     # Step 1: Read the words from the file
@@ -65,8 +72,8 @@ if __name__ == "__main__":
     # Step 2: Remove punctuation
     cleaned_elements = remove_punctuation(all_text_list)
 
-    # Step 3: Define the LOI regex
-    loi_regex = r"^\d\.\d{2}\.\d{3}$"
+    # Step 3: Define the LOI regex (only items starting with 2.)
+    loi_regex = r"^2\.\d{2}\.\d{3}$"
 
     # Step 4: Define the year regex for years between 1980 and the current year
     current_year = datetime.now().year
@@ -74,14 +81,13 @@ if __name__ == "__main__":
 
     # Step 5: Define the Arabic words to match
     arabic_words = [
-        ("الجريدة", "is_جريدة"),
-        ("عدد", "is_عدد"),
-        ("الرسمية", "is_الرسمية"),
-        ("درهم", "is_amount"),
-        ("متر", "is_area"),
-        ("قرار", "is_قرار"),
-        ("مقرر", "is_مقرر"),
-        ("حكم", "is_حكم"),
+        ("الجريدة", "is_جريدة", True),  # Apply fuzzy matching
+        ("الرسمية", "is_الرسمية", True),  # Apply fuzzy matching
+        ("درهم", "is_amount", False),   # Exact matching
+        ("متر", "is_area", False),      # Exact matching
+        ("قرار", "is_قرار", False),     # Exact matching
+        ("مقرر", "is_مقرر", False),     # Exact matching
+        ("حكم", "is_حكم", False),       # Exact matching
     ]
     keyword_amount = "DH"
 
@@ -94,9 +100,19 @@ if __name__ == "__main__":
     # Step 8: Extract and print matching fields for year regex (using cleaned list)
     extract_matching_fields_with_context(cleaned_elements, year_regex, f"Valid years between 1980 and {current_year}", matches_with_context, "is_year", is_regex=1, is_keyword=0)
 
-    # Step 9: Apply fuzzy matching for Arabic words and "DH"
-    for arabic_word, field_name in arabic_words:
-        extract_matching_fields_with_context(all_text_list, rf"\b{arabic_word}\b", f"Arabic word: {arabic_word}", matches_with_context, field_name, is_regex=0, is_keyword=1, fuzzy_match_word=arabic_word, threshold=80)
+    # Step 9: Apply fuzzy or exact matching for Arabic words and "DH"
+    for arabic_word, field_name, use_fuzzy in arabic_words:
+        extract_matching_fields_with_context(
+            all_text_list,
+            rf"\b{arabic_word}\b" if not use_fuzzy else None,  # Exact regex if not fuzzy
+            f"Arabic word: {arabic_word}",
+            matches_with_context,
+            field_name,
+            is_regex=0,
+            is_keyword=1,
+            fuzzy_match_word=arabic_word if use_fuzzy else None,  # Only apply fuzzy match for specific words
+            threshold=90 if use_fuzzy else 0  # High threshold for fuzzy matching
+        )
 
     extract_matching_fields_with_context(all_text_list, rf"\b{keyword_amount}\b", f"Keyword: {keyword_amount}", matches_with_context, "is_amount", is_regex=0, is_keyword=1)
 
@@ -105,7 +121,6 @@ if __name__ == "__main__":
         match.setdefault("is_loi", 0)
         match.setdefault("is_year", 0)
         match.setdefault("is_جريدة", 0)
-        match.setdefault("is_عدد", 0)
         match.setdefault("is_الرسمية", 0)
         match.setdefault("is_amount", 0)
         match.setdefault("is_area", 0)
