@@ -14,7 +14,7 @@ morocco_regions = {
 }
 
 # Define regex patterns as constants
-LOI_REGEX = r"^2\.\d{2}\.\d{3}$"  # Only items starting with 2.
+LOI_REGEX = r"^2\.(0[0-9]|1[0-9]|2[0-9]|3[0-9])\.\d{3}$"  # Only items starting with 2.
 PUNCTUATION_REGEX = r"[^\w\s]"  # Matches any character that is not a word or whitespace
 YEAR_REGEX_TEMPLATE = lambda current_year: fr"^(19(8[0-9]|9[0-9])|20(0[0-9]|1[0-9]|2[0-{current_year % 10}]))$"  # Year regex
 FIRST_INTEGER_REGEX = r"\b\d+\b"  # Finds the first integer in a string

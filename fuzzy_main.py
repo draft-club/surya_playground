@@ -63,18 +63,18 @@ def extract_matching_fields_with_context(words, regex, description, matches_with
 
         if match_found:
             # Determine context range
-            before, after = context_range if context_range else (0,0)  # Default to 3 before and after
+            before, after = context_range if context_range else (0, 0)
             context = words[max(0, index - before):index + 1] + words[index + 1:index + after + 1]
 
             # Store match and its index with the field flag
             matches_with_context[index] = {
                 "word": word,
                 "context": context,
-                "context_in_words": len(context),  # Count the number of words in the context
+                "context_in_words": len(context),
                 field_name: 1,
                 "is_regex": is_regex,
                 "is_keyword": is_keyword,
-                "object_start_index": index,  # Store starting index for object generation
+                "object_start_index": index,
             }
 
             # Print the match with context
@@ -84,7 +84,7 @@ def extract_matching_fields_with_context(words, regex, description, matches_with
 
 # Main script
 if __name__ == "__main__":
-    file_path = 'output_surya_commune.txt'
+    file_path = 'output_surya_radeff.txt'
 
     # Step 1: Read the words from the file
     all_text_list = process_text_file(file_path)
@@ -116,8 +116,8 @@ if __name__ == "__main__":
             is_regex=0,
             is_keyword=1,
             fuzzy_match_word=arabic_word if use_fuzzy else None,
-            threshold=90 if use_fuzzy else 0,
-            context_range=context_range,  # Use the custom context range
+            threshold=98 if use_fuzzy else 0,
+            context_range=context_range,
         )
 
     extract_matching_fields_with_context(all_text_list, rf"\b{KEYWORD_AMOUNT}\b", f"Keyword: {KEYWORD_AMOUNT}", matches_with_context, "is_amount", is_regex=0, is_keyword=1)
@@ -140,11 +140,18 @@ if __name__ == "__main__":
     df = pd.DataFrame.from_dict(matches_with_context, orient="index")
     df["context"] = df["context"].apply(lambda x: " ".join(x))  # Convert context list to string for readability
 
-    # Step 10: Export the DataFrame to an Excel file
+    # Step 10: Add two new columns
+    df["regex_expression"] = df.apply(
+        lambda row: LOI_REGEX if row["is_loi"] == 1 else (year_regex if row["is_year"] == 1 else "NA"),
+        axis=1
+    )
+    df["final_extraction"] = ""  # Initialize the 'final_extraction' column as empty
+
+    # Step 11: Export the DataFrame to an Excel file
     output_file = "matches_output.xlsx"
     df.to_excel(output_file, index=True, sheet_name="Matches")
     print(f"\nDataFrame exported to Excel file: {output_file}")
 
-    # Step 11: Print the sorted DataFrame
+    # Step 12: Print the sorted DataFrame
     print("\n--- Matches DataFrame (Sorted by Index) ---")
     print(df.to_string())
