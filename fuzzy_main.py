@@ -9,8 +9,9 @@ from dictionaries import (
     YEAR_REGEX_TEMPLATE,
     ARABIC_WORDS,
     KEYWORD_AMOUNT,
+    CONTEXT_RANGES,
+    THRESHOLD_VALUES
 )
-
 
 def match_localities_to_region(localities):
     """
@@ -29,7 +30,6 @@ def match_localities_to_region(localities):
             break
     return result
 
-
 def process_text_file(file_path):
     """
     Reads a text file, splits its content into words, and returns the words as a list.
@@ -38,15 +38,13 @@ def process_text_file(file_path):
         words = file.read().split()
     return words
 
-
 def remove_punctuation(words):
     """
     Removes punctuation from a list of words.
     """
     return [re.sub(PUNCTUATION_REGEX, "", word) for word in words]
 
-
-def extract_matching_fields_with_context(words, regex, description, matches_with_context, field_name, is_regex, is_keyword, fuzzy_match_word=None, threshold=90, context_range=None):
+def extract_matching_fields_with_context(words, regex, description, matches_with_context, field_name, is_regex, is_keyword, fuzzy_match_word=None):
     """
     Extracts words matching the given regex or via fuzzy matching, stores them in a dictionary with their indexes,
     and prints context based on the field type.
@@ -59,11 +57,12 @@ def extract_matching_fields_with_context(words, regex, description, matches_with
         if regex:
             match_found = re.match(regex, word)
         elif fuzzy_match_word:
+            threshold = THRESHOLD_VALUES.get(field_name, 90)  # Use threshold from dictionary
             match_found = fuzz.partial_ratio(word, fuzzy_match_word) >= threshold
 
         if match_found:
-            # Determine context range
-            before, after = context_range if context_range else (0, 0)
+            # Determine context range from CONTEXT_RANGES
+            before, after = CONTEXT_RANGES.get(field_name, (0, 0))
             context = words[max(0, index - before):index + 1] + words[index + 1:index + after + 1]
 
             # Store match and its index with the field flag
@@ -80,7 +79,6 @@ def extract_matching_fields_with_context(words, regex, description, matches_with
             # Print the match with context
             context_str = " ".join(context)
             print(f"Matched Element: {word}, Index: {index}, Context: {context_str}")
-
 
 # Main script
 if __name__ == "__main__":
@@ -116,8 +114,6 @@ if __name__ == "__main__":
             is_regex=0,
             is_keyword=1,
             fuzzy_match_word=arabic_word if use_fuzzy else None,
-            threshold=98 if use_fuzzy else 0,
-            context_range=context_range,
         )
 
     extract_matching_fields_with_context(all_text_list, rf"\b{KEYWORD_AMOUNT}\b", f"Keyword: {KEYWORD_AMOUNT}", matches_with_context, "is_amount", is_regex=0, is_keyword=1)
